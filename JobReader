@@ -1,44 +1,47 @@
 import java.io.*;
 import java.util.*;
 
-class JobReader  {
+class JobReader {
+    Queue<Process> jobQueue = new LinkedList<>();
+    static int count = 0;
+    final int maxProcess = 30;
 
-	Queue<Process> jobQueue = new LinkedList<>();
-	static int count=0; 
-	final int maxProcess = 30;
-
-    public void read(String filePath) {
-        try(BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-        
+    public Queue<Process> read(String filePath) {
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
             while ((line = br.readLine()) != null) {
-                if (line.startsWith("[")) 
-                	continue; 
-                if (count < maxProcess) { 
+                if (line.startsWith("[")) continue;
+
+                if (count < maxProcess) {
                     String[] parts = line.split("[:;]");
                     if (parts.length < 4) {
                         System.out.println("Invalid line: " + line);
-                        continue; 
+                        continue;
                     }
-                int id = Integer.parseInt(parts[0]);
-                int burstTime = Integer.parseInt(parts[1]);
-                int priority = Integer.parseInt(parts[2]);
-                int memoryRequired = Integer.parseInt(parts[3]);
-                
-                Process process = new Process(id, burstTime, priority, memoryRequired);
-                jobQueue.add(process); 
-                count++;
+
+                    int id = Integer.parseInt(parts[0].trim());
+                    int burstTime = Integer.parseInt(parts[1].trim());
+                    int priority = Integer.parseInt(parts[2].trim());
+                    int memoryRequired = Integer.parseInt(parts[3].trim());
+
+                    Process process = new Process(id, burstTime, priority, memoryRequired);
+                    jobQueue.add(process);
+                    count++;
                 }
             }
-        }catch (IOException e) {
+        } catch (FileNotFoundException e) {
+            System.err.println("Error: File not found - " + filePath);
+        } catch (IOException e) {
             System.err.println("Error reading file: " + e.getMessage());
         } catch (NumberFormatException e) {
             System.err.println("Error parsing number: " + e.getMessage());
         }
+    return  jobQueue;
     }
+
     public void printJobs() {
         for (Process process : jobQueue) {
             System.out.println(process);
         }
-}
     }
+}
