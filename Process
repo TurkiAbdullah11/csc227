@@ -12,6 +12,10 @@ Process(int id , int burstTime, int priority,int memoryRequired){
 	this.priority=priority;
 	this.memoryRequired=memoryRequired;
 }
+public String toString() {
+    return "Process ID: " + id + ", Burst Time: " + burstTime +
+           ", Priority: " + priority + ", Memory: " + memoryRequired;
+}
 public int getId() {
 	return id;
 }
