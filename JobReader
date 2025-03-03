@@ -8,13 +8,18 @@ class JobReader  {
 	final int maxProcess = 30;
 
     public void read(String filePath) {
-        try (BufferedReader br = new BufferedReader(new FileReader( filePath))) {
+        try(BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+        
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.startsWith("[")) 
                 	continue; 
-                if (count<=maxProcess) {
-                String[] parts = line.split("[:;]");
+                if (count < maxProcess) { 
+                    String[] parts = line.split("[:;]");
+                    if (parts.length < 4) {
+                        System.out.println("Invalid line: " + line);
+                        continue; 
+                    }
                 int id = Integer.parseInt(parts[0]);
                 int burstTime = Integer.parseInt(parts[1]);
                 int priority = Integer.parseInt(parts[2]);
@@ -25,8 +30,15 @@ class JobReader  {
                 count++;
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        }catch (IOException e) {
+            System.err.println("Error reading file: " + e.getMessage());
+        } catch (NumberFormatException e) {
+            System.err.println("Error parsing number: " + e.getMessage());
         }
     }
+    public void printJobs() {
+        for (Process process : jobQueue) {
+            System.out.println(process);
+        }
 }
+    }
