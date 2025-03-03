@@ -1,8 +1,9 @@
 public class Main {
 
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
+JobReader j = new JobReader();
+	        j.read("Ourjob.txt");
+	        j.printJobs();
 	}
 
 }
