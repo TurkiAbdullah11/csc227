@@ -1,0 +1,32 @@
+import java.io.*;
+import java.util.*;
+
+class JobReader  {
+
+	Queue<Process> jobQueue = new LinkedList<>();
+	static int count=0; 
+	final int maxProcess = 30;
+
+    public void read(String filePath) {
+        try (BufferedReader br = new BufferedReader(new FileReader( filePath))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.startsWith("[")) 
+                	continue; 
+                if (count<=maxProcess) {
+                String[] parts = line.split("[:;]");
+                int id = Integer.parseInt(parts[0]);
+                int burstTime = Integer.parseInt(parts[1]);
+                int priority = Integer.parseInt(parts[2]);
+                int memoryRequired = Integer.parseInt(parts[3]);
+                
+                Process process = new Process(id, burstTime, priority, memoryRequired);
+                jobQueue.add(process); 
+                count++;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
