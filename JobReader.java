@@ -24,7 +24,9 @@ class JobReader {
                     int priority = Integer.parseInt(parts[2].trim());
                     int memoryRequired = Integer.parseInt(parts[3].trim());
 
-                    Process process = new Process(id, burstTime, priority, memoryRequired);
+                    Process process = SystemCall.createProcess(id, burstTime, priority, memoryRequired);
+                    SystemCall.setProcessState(process,State.NEW); //When creating the process it's in NEW state
+
                     jobQueue.add(process);
                     count++;
                 }
@@ -40,6 +42,7 @@ class JobReader {
     }
 
     public void printJobs() {
+        System.out.println("[ JOB QUEUE ] Number of processes: " + JobReader.count);
         for (Process process : jobQueue) {
             System.out.println(process);
         }

@@ -1,9 +1,0 @@
-public class Main {
-
-	public static void main(String[] args) {
-JobReader j = new JobReader();
-	        j.read("Ourjob.txt");
-	        j.printJobs();
-	}
-
-}

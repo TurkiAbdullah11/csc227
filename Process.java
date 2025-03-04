@@ -6,6 +6,7 @@ private int priority;
 private int memoryRequired;
 private int waitingTime;
 private int turnaroundTime;
+private State state;
 Process(int id , int burstTime, int priority,int memoryRequired){
 	this.id=id;
 	this.burstTime=burstTime;
@@ -52,5 +53,10 @@ public int getTurnaroundTime() {
 public void setTurnaroundTime(int turnaroundTime) {
 	this.turnaroundTime = turnaroundTime;
 }
-
+public State getState() {
+		return state;
+	}
+public void setState(State state) {
+		this.state = state;
+	}
 }
