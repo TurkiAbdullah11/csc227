@@ -5,26 +5,47 @@ public class MemoryLoader {
     private final int maxSize = 2048;
     private int currentSize = 0;
 
-    // load Processes into ReadyQueue
-    public Queue<Process> loadToMemory(Queue<Process> jobQueue) {
+    // Add this new method to reset and reload processes
+    public boolean reloadReadyQueue(Queue<Process> jobQueue) {
+        // Clear ready queue and reset current size
+        readyQueue.clear();
+        currentSize = 0;
+        
+        // Try to load new processes
+        boolean loadedAny = false;
         Queue<Process> tempQueue = new LinkedList<>(jobQueue);
+        
         for (Process process : tempQueue) {
             if (process.getMemoryRequired() + currentSize <= maxSize) {
-                SystemCall.loadMemory(process,jobQueue,readyQueue);
+                SystemCall.loadMemory(process, jobQueue, readyQueue);
                 currentSize += process.getMemoryRequired();
-
-                SystemCall.setProcessState(process,State.READY); // NEW → READY when loading process into readyQueue
-            } else {
-                //System.out.println("Not enough memory for process " + process.getId());
+                SystemCall.setProcessState(process, State.READY);
+                loadedAny = true;
             }
         }
-        return readyQueue;
+        
+        return loadedAny; // Return true if any processes were loaded
+    }
+
+    // Modify the existing loadToMemory method to return boolean
+    public boolean loadToMemory(Queue<Process> jobQueue) {
+        return reloadReadyQueue(jobQueue);
+    }
+
+    public void removeProcess(Process process) {
+        if (process != null) {
+            currentSize -= process.getMemoryRequired();
+        }
     }
 
     public void printReadyQueue() {
-        System.out.println("[ READY QUEUE ] ; Used memory: " + currentSize + " / 2048 MB");
-        for (Process process : readyQueue) {
-            System.out.println(process);
+        if (readyQueue.isEmpty()) {
+            System.out.println("[ READY QUEUE ] ; Used memory: " + currentSize + " / 2048 MB (Empty)");
+        } else {
+            System.out.println("[ READY QUEUE ] ; Used memory: " + currentSize + " / 2048 MB");
+            for (Process process : readyQueue) {
+                System.out.println(process);
+            }
         }
     }
 }
