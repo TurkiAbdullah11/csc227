@@ -2,17 +2,23 @@
 public class Process {
 private int id;
 private int burstTime;
+private int initialBurstTime;
 private int priority;
 private int memoryRequired;
 private int waitingTime;
 private int turnaroundTime;
 private State state;
+
+
 Process(int id , int burstTime, int priority,int memoryRequired){
 	this.id=id;
 	this.burstTime=burstTime;
 	this.priority=priority;
 	this.memoryRequired=memoryRequired;
+	this.initialBurstTime = burstTime;
+	this.waitingTime = 0;
 }
+
 public String toString() {
     return "Process ID: " + id + ", Burst Time: " + burstTime +
            ", Priority: " + priority + ", Memory: " + memoryRequired;
@@ -59,4 +65,8 @@ public State getState() {
 public void setState(State state) {
 		this.state = state;
 	}
+public int getInitialBurstTime() {
+	return initialBurstTime;
+}
+
 }
