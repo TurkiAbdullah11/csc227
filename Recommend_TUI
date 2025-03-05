@@ -1,0 +1,96 @@
+🔹 FCFS Output (First-Come-First-Serve):
+
+========================================
+    First-Come-First-Serve (FCFS)
+========================================
+Process Execution Order:
+P1 -> P2 -> P3 -> P4
+
+Execution Timeline:
+Time | Process | Start Burst | Stop Burst
+-----------------------------------------
+0    | P1      | 25          | 0
+25   | P2      | 13          | 0
+38   | P3      | 20          | 0
+58   | P4      | 15          | 0
+
+Gantt Chart:
+| P1  | P2  | P3  | P4  |
+0     25    38    58    78  
+
+Average Waiting Time: 20.5 ms
+Average Turnaround Time: 38.6 ms
+========================================
+
+
+🔹 RR Output (Round-Robin, Quantum = 7ms):
+========================================
+     Round Robin (Quantum = 7ms)
+========================================
+Process Execution Order:
+P1 -> P2 -> P3 -> P4 -> P1 -> P3
+
+Execution Timeline:
+Time | Process | Start Burst | Stop Burst
+-----------------------------------------
+0    | P1      | 25          | 18
+7    | P2      | 13          | 6
+14   | P3      | 20          | 13
+21   | P4      | 15          | 8
+28   | P1      | 18          | 11
+35   | P3      | 13          | 6
+
+Gantt Chart:
+| P1  | P2  | P3  | P4  | P1  | P3  |
+0     7     14    21    28    35  
+
+Average Waiting Time: 15.3 ms
+Average Turnaround Time: 30.1 ms
+========================================
+
+
+🔹 Priority Scheduling Output (Preemptive)
+========================================
+  Priority Scheduling (Preemptive)
+========================================
+Process Execution Order:
+P3 -> P2 -> P1 -> P4 (Based on Priority)
+
+Execution Timeline:
+Time | Process | Start Burst | Stop Burst
+-----------------------------------------
+0    | P3      | 20          | 0
+20   | P2      | 13          | 0
+33   | P1      | 25          | 0
+58   | P4      | 15          | 0
+
+Gantt Chart:
+| P3  | P2  | P1  | P4  |
+0     20    33    58    
+
+[*] Starvation Detected:
+P4 suffered starvation (Waited **58ms** before execution!)
+
+Average Waiting Time: 12.4 ms
+Average Turnaround Time: 29.8 ms
+========================================
+
+
+📌 Final Comparison Output ([4] Run All & Compare)
+========================================
+      Scheduling Algorithms Comparison
+========================================
+Algorithm      | Avg Waiting Time | Avg Turnaround Time
+------------------------------------------------------
+FCFS          |      20.5 ms     |       38.6 ms
+Round Robin   |      15.3 ms     |       30.1 ms
+Priority      |      12.4 ms     |       29.8 ms
+------------------------------------------------------
+
+Best Algorithm (Lowest Waiting Time): **Priority Scheduling**
+[*] Starvation was detected in Priority Scheduling for P4!
+
+========================================
+
+
+
