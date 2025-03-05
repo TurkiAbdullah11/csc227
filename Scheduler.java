@@ -1,9 +1,4 @@
-import java.util.Queue;
-import java.util.List;
-import java.util.PriorityQueue;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
+import java.util.*;
 
 public class Scheduler {
     private MemoryLoader memoryLoader;
@@ -13,35 +8,44 @@ public class Scheduler {
     }
 
     public void FIFO(Queue<Process> readyQueue) {
-        System.out.println("Printing FIFO:");
-        int totalTime = 0;
+        int currentTime = 0;
+        long totalTime = 0; // Total execution time for all processes
+        List<Process> processes = new ArrayList<>();
+        List<GanttEntry> ganttChart = new ArrayList<>();
+
         
         while (!readyQueue.isEmpty()) {
             Process currentProcess = readyQueue.poll();
             memoryLoader.removeProcess(currentProcess);
-            
-            // Print process info before running
-            System.out.println(String.format("Process ID: %d, Burst Time: %d, Priority: %d, Memory: %d → RUNNING",
-                currentProcess.getId(),
-                currentProcess.getBurstTime(),
-                currentProcess.getPriority(),
-                currentProcess.getMemoryRequired()));
-                
             SystemCall.setProcessState(currentProcess, State.RUNNING);
-            
+
+            int startTime = currentTime;
+            int endTime = startTime + currentProcess.getBurstTime();
+
             try {
-                long startTime = System.nanoTime();
+                long startExecutionTime = System.nanoTime();
                 Thread.sleep(currentProcess.getBurstTime());
-                long executionTime = (System.nanoTime() - startTime) / 1_000_000;
+                long executionTime = (System.nanoTime() - startExecutionTime) / 1_000_000;
                 totalTime += executionTime;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            
+
+            currentProcess.setWaitingTime(startTime);
+            currentProcess.setTurnaroundTime(endTime);
+
+            // Add to Gantt chart
+            ganttChart.add(new GanttEntry(currentProcess.getId(), startTime, endTime));
+            currentTime = endTime;
+            // Add to processes list for statistics
+            processes.add(currentProcess);
+
             SystemCall.terminateProcess(currentProcess);
         }
-        
-        System.err.println("Total time taken to execute all processes: " + totalTime + " m/s.");
+
+        printOutput("First-Come-First-Serve (FCFS)", processes, ganttChart);
+
+        //System.err.println("Total time taken to execute all processes: " + totalTime + " m/s.");
     }
 
     public void RoundRobin(Queue<Process> readyQueue, int timeQuantum) {
@@ -156,6 +160,84 @@ public class Scheduler {
         }
         
         System.err.println("Total time taken to execute all processes: " + totalTime + " m/s.");
+    }
+
+    public void printOutput(String algorithmName, List<Process> processes, List<GanttEntry> ganttChart) {
+        System.out.println("========================================");
+        System.out.println("     " + algorithmName);
+        System.out.println("========================================");
+
+        // Print process execution order
+        System.out.print("Process Execution Order:\n");
+        Iterator<GanttEntry> iterator = ganttChart.iterator();
+        while (iterator.hasNext()) {
+            GanttEntry entry = iterator.next();
+            System.out.print("P" + entry.getProcessId());
+            if (iterator.hasNext()) {
+                System.out.print(" -> ");
+            }
+        }
+        System.out.println(); // Move to the next line after printing all processes
+
+        // Print execution timeline
+        System.out.println("Execution Timeline:");
+        System.out.println("Time | Process | Start Burst | Stop Burst");
+        System.out.println("-----------------------------------------");
+        for (GanttEntry entry : ganttChart) {
+            System.out.printf("%-4d | P%-6d | %-11d | %-9d\n",
+                    entry.getStartTime(), entry.getProcessId(), entry.getStartTime(), entry.getEndTime());
+        }
+
+        printGanttChart(ganttChart);
+
+        // Print average waiting and turnaround times
+        double avgWaitingTime = calculateAverageWaitingTime(processes);
+        double avgTurnaroundTime = calculateAverageTurnaroundTime(processes);
+        System.out.printf("Average Waiting Time: %.1f ms\n", avgWaitingTime);
+        System.out.printf("Average Turnaround Time: %.1f ms\n", avgTurnaroundTime);
+
+        System.out.println("========================================");
+    }
+
+    public void printGanttChart(List<GanttEntry> ganttChart) {
+        if (ganttChart.isEmpty()) {
+            System.out.println("No processes executed.");
+            return;
+        }
+
+        System.out.println("Gantt Chart:");
+
+        // Print the top line (process blocks)
+        System.out.print("|");
+        for (GanttEntry entry : ganttChart) {
+            System.out.printf(" P%-2d |", entry.getProcessId());
+        }
+        System.out.println();
+        int endTime = 0;
+        System.out.print(endTime);
+        for (GanttEntry entry : ganttChart) {
+            int digits = String.valueOf(endTime).length();
+            endTime = entry.getEndTime();
+            int spacing = 6 - digits;
+            System.out.printf("%" + (spacing + String.valueOf(endTime).length()) + "d", endTime);
+        }
+        System.out.println();
+    }
+
+    private double calculateAverageWaitingTime(List<Process> processes) {
+        double totalWaitingTime = 0;
+        for (Process process : processes) {
+            totalWaitingTime += process.getWaitingTime();
+        }
+        return totalWaitingTime / processes.size();
+    }
+
+    private double calculateAverageTurnaroundTime(List<Process> processes) {
+        double totalTurnaroundTime = 0;
+        for (Process process : processes) {
+            totalTurnaroundTime += process.getTurnaroundTime();
+        }
+        return totalTurnaroundTime / processes.size();
     }
 }
 
