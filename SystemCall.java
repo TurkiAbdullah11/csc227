@@ -5,6 +5,16 @@ public class SystemCall {
     public static Process createProcess(int id, int burstTime, int priority, int memoryRequired) {
         return new Process(id, burstTime, priority, memoryRequired);
     }
+    
+    public static Process terminateProcess(Process process) {
+        if (process == null) {
+            System.out.println("Error: Attempted to terminate a null process.");
+            return null;
+        }
+        process.setState(State.TERMINATED);
+        //System.out.println("Process ID " + process.getId() + " terminated.");
+        return process;
+    }
 
     public static void loadMemory(Process process, Queue<Process> jobQueue, Queue<Process> readyQueue) {
         if (process == null) {
