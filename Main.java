@@ -57,8 +57,7 @@ public class Main {
                         }
                         break;
                     case 4:
-                        // TODO: Implement comparison of all algorithms
-                        System.out.println("Feature coming soon...");
+                        scheduler.compareAllAlgorithms(j,m);
                         break;
                     case 5:
                         System.out.println("Exiting simulator...");
