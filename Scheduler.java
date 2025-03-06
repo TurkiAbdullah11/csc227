@@ -49,58 +49,78 @@ public class Scheduler {
     }
 
     public void RoundRobin(Queue<Process> readyQueue, int timeQuantum) {
-        System.out.println("Printing Round Robin (Time Quantum = " + timeQuantum + " ms):");
+        //System.out.println("Printing Round Robin (Time Quantum = " + timeQuantum + " ms):");
+        int currentTime = 0;
         int totalTime = 0;
+        List<Process> processes = new ArrayList<>();
+        List<GanttEntry> ganttChart = new ArrayList<>();
         
         while (!readyQueue.isEmpty()) {
             Process currentProcess = readyQueue.poll();
             memoryLoader.removeProcess(currentProcess);
             SystemCall.setProcessState(currentProcess, State.RUNNING);
-            
+
             int remainingBurst = currentProcess.getBurstTime();
             int executeTime = Math.min(remainingBurst, timeQuantum);
-            
+
+            int startTime = currentTime;
+            int endTime = startTime + executeTime;
+
             // First time process runs - show full info
-            if (remainingBurst == currentProcess.getInitialBurstTime()) {
-                System.out.println(String.format(
-                    "Process ID: %d, Burst Time: %d, Priority: %d, Memory: %d → RUNNING for %d ms%s",
-                    currentProcess.getId(),
-                    currentProcess.getBurstTime(),
-                    currentProcess.getPriority(),
-                    currentProcess.getMemoryRequired(),
-                    executeTime,
-                    (executeTime == remainingBurst) ? " (COMPLETED)" : ""));  // Add this check
-            } else {
-                boolean isCompleting = remainingBurst <= executeTime;
-                System.out.println(String.format(
-                    "Process ID: %d, Remaining Burst Time: %d → RUNNING for %d ms%s",
-                    currentProcess.getId(),
-                    remainingBurst,
-                    executeTime,
-                    isCompleting ? " (COMPLETED)" : ""));
-            }
+//            if (remainingBurst == currentProcess.getInitialBurstTime()) {
+//                System.out.println(String.format(
+//                    "Process ID: %d, Burst Time: %d, Priority: %d, Memory: %d → RUNNING for %d ms%s",
+//                    currentProcess.getId(),
+//                    currentProcess.getBurstTime(),
+//                    currentProcess.getPriority(),
+//                    currentProcess.getMemoryRequired(),
+//                    executeTime,
+//                    (executeTime == remainingBurst) ? " (COMPLETED)" : ""));  // Add this check
+//            } else {
+//                boolean isCompleting = remainingBurst <= executeTime;
+//                System.out.println(String.format(
+//                    "Process ID: %d, Remaining Burst Time: %d → RUNNING for %d ms%s",
+//                    currentProcess.getId(),
+//                    remainingBurst,
+//                    executeTime,
+//                    isCompleting ? " (COMPLETED)" : ""));
+//            }
             
             try {
-                long startTime = System.nanoTime();
+                long startExecutionTime  = System.nanoTime();
                 Thread.sleep(executeTime);
-                long executionTime = (System.nanoTime() - startTime) / 1_000_000;
+                long executionTime = (System.nanoTime() - startExecutionTime ) / 1_000_000;
                 totalTime += executionTime;
                 
                 remainingBurst -= executeTime;
                 currentProcess.setBurstTime(remainingBurst);
-                
+
+                currentProcess.setWaitingTime(startTime);
+                currentProcess.setTurnaroundTime(endTime);
+
+                ganttChart.add(new GanttEntry(currentProcess.getId(), startTime, endTime));
+                currentTime = endTime;
+
+                processes.add(currentProcess);
+
                 if (remainingBurst > 0) {
                     SystemCall.setProcessState(currentProcess, State.READY);
                     readyQueue.add(currentProcess);
                 } else {
+                    // Add to processes list for statistics
+                    processes.add(currentProcess);
+
                     SystemCall.terminateProcess(currentProcess);
                 }
+
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         }
-        
-        System.err.println("Total time taken to execute all processes: " + totalTime + " m/s.");
+
+        printOutput("Round Robin (Quantum = 7ms)", processes, ganttChart);
+
+        //System.err.println("Total time taken to execute all processes: " + totalTime + " m/s.");
     }
 
     public void PriorityQueue(Queue<Process> readyQueue) {
