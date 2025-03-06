@@ -7,7 +7,7 @@ public class Scheduler {
         this.memoryLoader = memoryLoader;
     }
 
-    public void FIFO(Queue<Process> readyQueue) {
+    public Results FIFO(Queue<Process> readyQueue) {
         int currentTime = 0;
         long totalTime = 0; // Total execution time for all processes
         List<Process> processes = new ArrayList<>();
@@ -44,11 +44,11 @@ public class Scheduler {
         }
 
         printOutput("First-Come-First-Serve (FCFS)", processes, ganttChart);
-
+        return calculateAverages(processes);
         //System.err.println("Total time taken to execute all processes: " + totalTime + " m/s.");
     }
 
-    public void RoundRobin(Queue<Process> readyQueue, int timeQuantum) {
+    public Results RoundRobin(Queue<Process> readyQueue, int timeQuantum) {
         //System.out.println("Printing Round Robin (Time Quantum = " + timeQuantum + " ms):");
         int currentTime = 0;
         int totalTime = 0;
@@ -119,16 +119,22 @@ public class Scheduler {
         }
 
         printOutput("Round Robin (Quantum = 7ms)", processes, ganttChart);
-
+        return calculateAverages(processes);
         //System.err.println("Total time taken to execute all processes: " + totalTime + " m/s.");
     }
 
-    public void PriorityQueue(Queue<Process> readyQueue) {
-        System.out.println("Printing Priority Queue (Preemptive with Aging):");
+    public Results PriorityQueue(Queue<Process> readyQueue) {
+        //System.out.println("Printing Priority Queue (Preemptive with Aging):");
+        int currentTime = 0;
         int totalTime = 0;
+
         final int AGING_THRESHOLD = 10;    
         final int PRIORITY_BOOST = 2;     
-        final int MAX_PRIORITY = 8;      
+        final int MAX_PRIORITY = 8;
+
+
+        List<Process> processes = new ArrayList<>();
+        List<GanttEntry> ganttChart = new ArrayList<>();
         
         PriorityQueue<Process> priorityQueue = new PriorityQueue<>((p1, p2) -> 
             p2.getPriority() - p1.getPriority());
@@ -140,7 +146,10 @@ public class Scheduler {
             Process currentProcess = priorityQueue.poll();
             memoryLoader.removeProcess(currentProcess);
             SystemCall.setProcessState(currentProcess, State.RUNNING);
-            
+
+            int startTime = currentTime;
+            int endTime = startTime + currentProcess.getBurstTime();
+
             // Apply aging to waiting processes
             for (Process waitingProcess : priorityQueue) {
                 waitingProcess.setWaitingTime(waitingProcess.getWaitingTime() + 1);
@@ -148,9 +157,14 @@ public class Scheduler {
                 if (waitingProcess.getWaitingTime() >= AGING_THRESHOLD) {
                     int newPriority = Math.min(waitingProcess.getPriority() + PRIORITY_BOOST, MAX_PRIORITY);
                     if (newPriority > waitingProcess.getPriority()) {
-                        System.out.println("Aging: Process " + waitingProcess.getId() + 
-                                        " priority increased from " + waitingProcess.getPriority() + 
-                                         " to " + newPriority);
+
+                        System.out.println("[*] Starvation Detected:");
+                        System.out.printf("P%d suffered starvation (Waited **%dms** before execution!)", waitingProcess.getId(), waitingProcess.getWaitingTime());
+
+//                        System.out.println("Aging: Process " + waitingProcess.getId() +
+//                                        " priority increased from " + waitingProcess.getPriority() +
+//                                         " to " + newPriority);
+
                         waitingProcess.setPriority(newPriority);
                         waitingProcess.setWaitingTime(0);
                     }
@@ -159,27 +173,37 @@ public class Scheduler {
             
             currentProcess.setWaitingTime(0);
             
-            System.out.println(String.format("Process ID: %d, Priority: %d, Burst Time: %d, Memory: %d → RUNNING",
-                currentProcess.getId(),
-                currentProcess.getPriority(),
-                currentProcess.getBurstTime(),
-                currentProcess.getMemoryRequired()));
+//            System.out.println(String.format("Process ID: %d, Priority: %d, Burst Time: %d, Memory: %d → RUNNING",
+//                currentProcess.getId(),
+//                currentProcess.getPriority(),
+//                currentProcess.getBurstTime(),
+//                currentProcess.getMemoryRequired()));
             
             try {
-                long startTime = System.nanoTime();
+                long startExecutionTime = System.nanoTime();
                 Thread.sleep(currentProcess.getBurstTime()); // Run for full burst time
-                long executionTime = (System.nanoTime() - startTime) / 1_000_000;
+                long executionTime = (System.nanoTime() - startExecutionTime) / 1_000_000;
                 totalTime += executionTime;
+
+                currentProcess.setWaitingTime(startTime);
+                currentProcess.setTurnaroundTime(endTime);
+
+                ganttChart.add(new GanttEntry(currentProcess.getId(), startTime, endTime));
+                currentTime = endTime;
+
+                processes.add(currentProcess);
                 
                 SystemCall.terminateProcess(currentProcess);
-                System.out.println("Process ID: " + currentProcess.getId() + " completed execution");
+                //System.out.println("Process ID: " + currentProcess.getId() + " completed execution");
                 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         }
-        
-        System.err.println("Total time taken to execute all processes: " + totalTime + " m/s.");
+
+        printOutput("Priority Queue (Preemptive with Aging)", processes, ganttChart);
+        return calculateAverages(processes);
+        //System.err.println("Total time taken to execute all processes: " + totalTime + " m/s.");
     }
 
     public void printOutput(String algorithmName, List<Process> processes, List<GanttEntry> ganttChart) {
@@ -259,6 +283,78 @@ public class Scheduler {
         }
         return totalTurnaroundTime / processes.size();
     }
+
+    private Results calculateAverages(List<Process> processes) {
+        return new Results(calculateAverageWaitingTime(processes), calculateAverageTurnaroundTime(processes));
+    }
+
+    public void compareAllAlgorithms(JobReader j, MemoryLoader m) {
+
+        Results fifoResults = null;
+        Results roundRobinResults = null;
+        Results priorityResults = null;
+        // Run All 3 algorithms and store results
+        for(int i=1;i<=3;i++){
+            j.read("Ourjob.txt");
+            m.loadToMemory(j.jobQueue);
+            while (!j.jobQueue.isEmpty() || !m.readyQueue.isEmpty()) {
+                if (m.readyQueue.isEmpty() && !j.jobQueue.isEmpty()) {
+                    System.out.println("\nLoading next batch of processes...");
+                    m.reloadReadyQueue(j.jobQueue);
+                    m.printReadyQueue();
+                    System.out.println("====================================================");
+                }
+
+                switch (i) {
+                    case 1:
+                        if (!m.readyQueue.isEmpty()) {
+                            System.out.println("\n[Running FCFS Scheduler]");
+                            fifoResults = FIFO(m.readyQueue);
+                        }
+                        break;
+                    case 2:
+                        if (!m.readyQueue.isEmpty()) {
+                            final int timeQuantum = 7;
+                            System.out.println("\n[Running Round Robin Scheduler (Quantum: 7ms)]");
+                            roundRobinResults = RoundRobin(m.readyQueue, 7);
+                        }
+                        break;
+                    case 3:
+                        if (!m.readyQueue.isEmpty()) {
+                            System.out.println("\n[Running Priority Scheduler]");
+                            priorityResults = PriorityQueue(m.readyQueue);
+                        }
+                        break;
+                    default:
+                        System.out.println("Invalid iteration.");
+                        break;
+                }
+            }
+        }
+
+        // Print comparison table
+        System.out.println("======================================================");
+        System.out.println("           Scheduling Algorithms Comparison");
+        System.out.println("======================================================");
+        System.out.println("Algorithm      | Avg Waiting Time | Avg Turnaround Time");
+        System.out.println("------------------------------------------------------");
+        System.out.printf("FCFS          |      %.1f ms     |       %.1f ms\n", fifoResults.getAvgWaitingTime(), fifoResults.getAvgTurnaroundTime());
+        System.out.printf("Round Robin   |      %.1f ms     |       %.1f ms\n", roundRobinResults.getAvgWaitingTime(), roundRobinResults.getAvgTurnaroundTime());
+        System.out.printf("Priority      |      %.1f ms     |       %.1f ms\n", priorityResults.getAvgWaitingTime(), priorityResults.getAvgTurnaroundTime());
+        System.out.println("------------------------------------------------------");
+
+        // Find the best algorithm (lowest waiting time)
+        String bestAlgorithm = "Priority Scheduling";
+        if (fifoResults.getAvgWaitingTime() < roundRobinResults.getAvgWaitingTime() && fifoResults.getAvgWaitingTime() < priorityResults.getAvgWaitingTime()) {
+            bestAlgorithm = "First-Come-First-Serve (FCFS)";
+        } else if (roundRobinResults.getAvgWaitingTime() < priorityResults.getAvgWaitingTime()) {
+            bestAlgorithm = "Round Robin";
+        }
+
+        System.out.println("\nBest Algorithm (Lowest Waiting Time): " + bestAlgorithm);
+
+    }
+
 }
 
 
