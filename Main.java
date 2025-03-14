@@ -1,4 +1,5 @@
 import java.util.Scanner;
+import java.util.LinkedList;
 
 public class Main {
     public static void main(String[] args) {
@@ -6,11 +7,6 @@ public class Main {
         MemoryLoader m = new MemoryLoader();
         Scheduler scheduler = new Scheduler(m);
         Scanner scanner = new Scanner(System.in);
-        
-        // Load and display initial job information
-        j.read("Ourjob.txt");
-        j.printJobs();
-        System.out.println("====================================================");
         
         // Display menu
         while (true) {
@@ -27,46 +23,98 @@ public class Main {
             
             int choice = scanner.nextInt();
             
-            // Process all jobs with selected algorithm
-            while (!j.jobQueue.isEmpty() || !m.readyQueue.isEmpty()) {
-                if (m.readyQueue.isEmpty() && !j.jobQueue.isEmpty()) {
-                    System.out.println("\nLoading next batch of processes...");
-                    m.reloadReadyQueue(j.jobQueue);
-                    m.printReadyQueue();
-                    System.out.println("====================================================");
+            if (choice == 5) {
+                System.out.println("Exiting simulator...");
+                scanner.close();
+                System.exit(0);
+            }
+            
+            // Start file reader thread instead of directly loading
+            // j.read("Ourjob.txt");
+            // j.printJobs();
+            JobReaderThread fileThread = new JobReaderThread(j, "C:/Users/turki/Downloads/Ourjob.txt");
+            fileThread.start();
+            
+            // Wait for file reading to finish
+            try {
+                fileThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            
+            System.out.println("====================================================");
+            
+            // Start memory loader thread
+            // m.loadToMemory(j.jobQueue);
+            MemoryLoaderThread memThread = new MemoryLoaderThread(m, j.jobQueue);
+            memThread.start();
+            
+            if (choice == 4) {
+                // For comparing all algorithms
+                scheduler.compareAllAlgorithms(j, m);
+                
+                // Stop the memory thread
+                memThread.stopThread();
+                try {
+                    memThread.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                // Process jobs with selected algorithm in main thread
+                while (true) {
+                    // Check if ready queue has processes
+                    if (!m.readyQueue.isEmpty()) {
+                        // Get the processes
+                        LinkedList<Process> processes = new LinkedList<>();
+                        
+                        // Copy processes to a new list
+                        for (Process p : m.readyQueue) {
+                            processes.add(p);
+                        }
+                        
+                        // Clear the ready queue
+                        m.readyQueue.clear();
+                        
+                        // Run the right algorithm
+                        switch (choice) {
+                            case 1:
+                                System.out.println("\nRunning FCFS now:");
+                                scheduler.FIFO(processes);
+                                break;
+                            case 2:
+                                System.out.println("\nRunning Round Robin now:");
+                                scheduler.RoundRobin(processes, 7);
+                                break;
+                            case 3:
+                                System.out.println("\nRunning Priority now:");
+                                scheduler.PriorityQueue(processes);
+                                break;
+                            default:
+                                System.out.println("Invalid choice");
+                                break;
+                        }
+                    }
+                    
+                    // Check if we're done
+                    if (j.jobQueue.isEmpty() && m.readyQueue.isEmpty()) {
+                        break;
+                    }
+                    
+                    // Wait a bit before checking again
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
                 
-                switch (choice) {
-                    case 1:
-                        if (!m.readyQueue.isEmpty()) {
-                            System.out.println("\n[Running FCFS Scheduler]");
-                            scheduler.FIFO(m.readyQueue);
-                        }
-                        break;
-                    case 2:
-                        if (!m.readyQueue.isEmpty()) {
-                            final int timeQuantum = 7;
-                            System.out.println("\n[Running Round Robin Scheduler (Quantum: 7ms)]");
-                            scheduler.RoundRobin(m.readyQueue, timeQuantum);
-                        }
-                        break;
-                    case 3:
-                        if (!m.readyQueue.isEmpty()) {
-                            System.out.println("\n[Running Priority Scheduler]");
-                            scheduler.PriorityQueue(m.readyQueue);
-                        }
-                        break;
-                    case 4:
-                        scheduler.compareAllAlgorithms(j,m);
-                        break;
-                    case 5:
-                        System.out.println("Exiting simulator...");
-                        scanner.close();
-                        System.exit(0);
-                        break;
-                    default:
-                        System.out.println("Invalid choice. Please select 1-5.");
-                        continue;
+                // Stop the memory thread
+                memThread.stopThread();
+                try {
+                    memThread.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
             
@@ -81,9 +129,6 @@ public class Main {
                 System.out.println("Exiting simulator...");
                 scanner.close();
                 System.exit(0);
-            } else {
-                j.read("Ourjob.txt");
-                m.loadToMemory(j.jobQueue);
             }
         }
     }

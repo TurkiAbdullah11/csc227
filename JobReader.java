@@ -2,11 +2,14 @@ import java.io.*;
 import java.util.*;
 
 class JobReader {
-    Queue<Process> jobQueue = new LinkedList<>();
+    Queue<Process> jobQueue = new LinkedList<>();  
     static int count = 0;
     final int maxProcess = 30;
 
-    public Queue<Process> read(String filePath) {
+    public synchronized Queue<Process> read(String filePath) {
+        count = 0;  
+        jobQueue.clear();  
+        
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
             while ((line = br.readLine()) != null) {
@@ -15,7 +18,6 @@ class JobReader {
                 if (count < maxProcess) {
                     String[] parts = line.split("[:;]");
                     if (parts.length < 4) {
-                        System.out.println("Invalid line: " + line);
                         continue;
                     }
 
@@ -25,7 +27,7 @@ class JobReader {
                     int memoryRequired = Integer.parseInt(parts[3].trim());
 
                     Process process = SystemCall.createProcess(id, burstTime, priority, memoryRequired);
-                    SystemCall.setProcessState(process,State.NEW); //When creating the process it's in NEW state
+                    SystemCall.setProcessState(process, State.NEW); //When creating the process it's in NEW state
 
                     jobQueue.add(process);
                     count++;
@@ -38,11 +40,11 @@ class JobReader {
         } catch (NumberFormatException e) {
             System.err.println("Error parsing number: " + e.getMessage());
         }
-    return  jobQueue;
+        return jobQueue;
     }
 
-    public void printJobs() {
-        System.out.println("[ JOB QUEUE ] Number of processes: " + JobReader.count);
+    public synchronized void printJobs() {
+        System.out.println("[ JOB QUEUE ] Number of processes: " + count);
         for (Process process : jobQueue) {
             System.out.println(process);
         }
